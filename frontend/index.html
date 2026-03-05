@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INDRA | Intelligent Network Data ROI Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="toast-container"></div>
+    <div class="background-glow"></div>
+
+    <div class="app-container">
+        <header>
+            <a href="/" class="logo" style="text-decoration: none;">
+                <span style="font-size: 24px; font-weight: bold; color: var(--primary);">I<span class="highlight"
+                        style="color: var(--accent);">NDRA</span></span>
+            </a>
+            <p class="subtitle">Intelligent Network Data ROI Analytics</p>
+            <div class="header-actions">
+                <button id="liveModeBtn" class="btn-nav live-toggle" title="Toggle Live Mode">
+                    <i class="fa-solid fa-bolt"></i> Live
+                    <span class="live-indicator" id="liveIndicator"></span>
+                </button>
+                <button id="dashboardBtn" class="btn-nav">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </button>
+                <button id="historyBtn" class="btn-nav">
+                    <i class="fa-solid fa-history"></i> History
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section id="dashboardSection" class="dashboard-section" style="display: none;">
+            <div class="dashboard-header">
+                <h2><i class="fa-solid fa-chart-pie"></i> Analytics Dashboard</h2>
+                <div class="dashboard-status">
+                    <span class="auto-refresh-status" id="autoRefreshStatus">
+                        <i class="fa-solid fa-sync"></i> Auto-refresh: <span id="refreshInterval">2s</span>
+                    </span>
+                    <label class="switch">
+                        <input type="checkbox" id="autoRefreshToggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <button id="closeDashboard" class="btn-close"><i class="fa-solid fa-times"></i></button>
+            </div>
+
+            <div class="live-metrics-panel" id="liveMetricsPanel">
+                <div class="live-panel-header">
+                    <h3><i class="fa-solid fa-satellite-dish"></i> Live Campaign Activity</h3>
+                    <span class="live-badge" id="liveBadge"><span class="pulse-dot"></span> LIVE</span>
+                </div>
+                <div class="live-ticker" id="liveTicker">
+                    <div class="ticker-item">
+                        <i class="fa-solid fa-eye"></i>
+                        <span class="ticker-label">Impressions</span>
+                        <span class="ticker-value" id="liveImpressions">0</span>
+                    </div>
+                    <div class="ticker-item">
+                        <i class="fa-solid fa-mouse-pointer"></i>
+                        <span class="ticker-label">Clicks</span>
+                        <span class="ticker-value" id="liveClicks">0</span>
+                    </div>
+                    <div class="ticker-item">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <span class="ticker-label">Conversions</span>
+                        <span class="ticker-value" id="liveConversions">0</span>
+                    </div>
+                    <div class="ticker-item">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                        <span class="ticker-label">Net Profit</span>
+                        <span class="ticker-value" id="liveProfit">₹0</span>
+                    </div>
+                    <div class="ticker-item">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                        <span class="ticker-label">Avg ROI</span>
+                        <span class="ticker-value" id="liveRoi">0x</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-bullhorn"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Campaigns</span>
+                        <span class="stat-value" id="totalCampaigns">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon revenue"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Revenue</span>
+                        <span class="stat-value" id="totalRevenue">₹0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon cost"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Cost</span>
+                        <span class="stat-value" id="totalCost">₹0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon ctr"><i class="fa-solid fa-mouse-pointer"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Avg CTR</span>
+                        <span class="stat-value" id="avgCtr">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="card">
+                    <h3><i class="fa-solid fa-layer-group"></i> ROI by Channel</h3>
+                    <div class="chart-container"
+                        style="display: flex; justify-content: center; align-items: center; min-height: 250px;">
+                        <img id="roiChartImage" src="" style="display: none; max-width: 100%; border-radius: 8px;"
+                            alt="ROI Chart">
+                        <p id="roiNoData" class="text-muted" style="display: none;">No data yet</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3><i class="fa-solid fa-users-viewfinder"></i> CAC by Channel</h3>
+                    <div class="chart-container"
+                        style="display: flex; justify-content: center; align-items: center; min-height: 250px;">
+                        <img id="cacChartImage" src="" style="display: none; max-width: 100%; border-radius: 8px;"
+                            alt="CAC Chart">
+                        <p id="cacNoData" class="text-muted" style="display: none;">No data yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <h3><i class="fa-solid fa-robot"></i> AI Recommendations</h3>
+                <div id="recommendationsContainer" class="recommendations-list">
+                    <p class="text-muted">Analyze campaigns to generate recommendations.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section id="historySection" class="history-section" style="display: none;">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-history"></i> Campaign History</h2>
+                <button class="btn-close" onclick="showSection('input')"><i class="fa-solid fa-times"></i></button>
+            </div>
+
+            <div class="card">
+                <div class="table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fa-solid fa-tag"></i> Campaign</th>
+                                <th><i class="fa-solid fa-share-nodes"></i> Channel</th>
+                                <th><i class="fa-solid fa-eye"></i> Impressions</th>
+                                <th><i class="fa-solid fa-mouse-pointer"></i> Clicks</th>
+                                <th><i class="fa-solid fa-check-circle"></i> Conversions</th>
+                                <th><i class="fa-solid fa-coins"></i> Cost</th>
+                                <th><i class="fa-solid fa-indian-rupee-sign"></i> Revenue</th>
+                                <th><i class="fa-solid fa-chart-line"></i> ROI</th>
+                                <th><i class="fa-solid fa-percentage"></i> CTR</th>
+                                <th><i class="fa-solid fa-flask"></i> Variant</th>
+                                <th style="text-align: center;"><i class="fa-solid fa-gear"></i> Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                        </tbody>
+                    </table>
+                    <p id="historyNoData" class="text-muted" style="text-align: center; padding: 40px;">No campaign
+                        history yet. Submit your first campaign!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Form Section -->
+        <main id="mainContent">
+            <!-- A/B Testing Section -->
+            <section id="abTestSection" class="card ab-section" style="display: none;">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-vial"></i> A/B Variant Testing</h2>
+                    <p class="card-subtitle">Compare two campaign variants to determine the winner</p>
+                </div>
+
+                <form id="abTestForm">
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fa-solid fa-circle-info"></i> Test Configuration</h4>
+
+                        <div class="metrics-inputs-grid">
+                            <div class="input-group">
+                                <label for="abCampaignName">Campaign Name *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-tag"></i>
+                                    <input type="text" id="abCampaignName" placeholder="e.g. Summer Sale 2024" required>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label for="abChannel">Marketing Channel *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-share-nodes"></i>
+                                    <select id="abChannel" required>
+                                        <option value="">Select Channel</option>
+                                        <option value="Direct">Direct</option>
+                                        <option value="Facebook">Facebook</option>
+                                        <option value="Google Ads">Google Ads</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Instagram">Instagram</option>
+                                        <option value="LinkedIn">LinkedIn</option>
+                                        <option value="Twitter">Twitter</option>
+                                        <option value="TikTok">TikTok</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-divider"></div>
+
+                    <div class="ab-form-grid">
+                        <!-- Variant A -->
+                        <div class="ab-variant-form variant-a">
+                            <h4><i class="fa-solid fa-flask"></i> Variant A</h4>
+                            <div class="ab-metrics-grid">
+                                <div class="input-group">
+                                    <label for="abImpressionsA">Impressions *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <input type="number" id="abImpressionsA" placeholder="10000" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="abClicksA">Clicks *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-mouse-pointer"></i>
+                                        <input type="number" id="abClicksA" placeholder="500" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="abConversionsA">Conversions *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-check-circle"></i>
+                                        <input type="number" id="abConversionsA" placeholder="50" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="abCostA">Cost (₹) *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-coins"></i>
+                                        <input type="number" id="abCostA" placeholder="1000.00" min="0" step="0.01"
+                                            required>
+                                    </div>
+                                </div>
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label for="abRevenueA">Revenue (₹) *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-indian-rupee-sign"></i>
+                                        <input type="number" id="abRevenueA" placeholder="5000.00" min="0" step="0.01"
+                                            required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Variant B -->
+                        <div class="ab-variant-form variant-b">
+                            <h4><i class="fa-solid fa-flask"></i> Variant B</h4>
+                            <div class="ab-metrics-grid">
+                                <div class="input-group">
+                                    <label for="abImpressionsB">Impressions *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <input type="number" id="abImpressionsB" placeholder="10000" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="abClicksB">Clicks *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-mouse-pointer"></i>
+                                        <input type="number" id="abClicksB" placeholder="500" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="abConversionsB">Conversions *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-check-circle"></i>
+                                        <input type="number" id="abConversionsB" placeholder="50" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="abCostB">Cost (₹) *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-coins"></i>
+                                        <input type="number" id="abCostB" placeholder="1000.00" min="0" step="0.01"
+                                            required>
+                                    </div>
+                                </div>
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label for="abRevenueB">Revenue (₹) *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-indian-rupee-sign"></i>
+                                        <input type="number" id="abRevenueB" placeholder="5000.00" min="0" step="0.01"
+                                            required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Container -->
+                    <div id="abResultsContainer" class="ab-results" style="display: none;">
+                        <div id="abResultsContent"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">
+                            <i class="fa-solid fa-vial"></i> Run A/B Test
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Campaign Analysis Form -->
+            <div class="input-grid">
+                <section class="card input-card" id="inputCard">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-rocket"></i> Campaign Analysis</h2>
+                        <p class="card-subtitle">Quick ROI & Performance Insights</p>
+                    </div>
+
+                    <form id="analyzeForm">
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fa-solid fa-circle-1"></i> Campaign Details</h4>
+
+                            <div class="input-group">
+                                <label for="campaignName">Campaign Name *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-tag"></i>
+                                    <input type="text" id="campaignName" placeholder="e.g. Summer Sale 2024" required>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="channel">Marketing Channel *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-share-nodes"></i>
+                                    <select id="channel" required>
+                                        <option value="">Select Channel</option>
+                                        <option value="Direct">Direct</option>
+                                        <option value="Facebook">Facebook</option>
+                                        <option value="Google Ads">Google Ads</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Instagram">Instagram</option>
+                                        <option value="LinkedIn">LinkedIn</option>
+                                        <option value="Twitter">Twitter</option>
+                                        <option value="TikTok">TikTok</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-divider"></div>
+
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fa-solid fa-circle-2"></i> Performance Metrics</h4>
+
+                            <div class="metrics-inputs-grid">
+                                <div class="input-group">
+                                    <label for="impressions">Impressions *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <input type="number" id="impressions" placeholder="10000" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="clicks">Clicks *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-mouse-pointer"></i>
+                                        <input type="number" id="clicks" placeholder="500" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="conversions">Conversions *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-check-circle"></i>
+                                        <input type="number" id="conversions" placeholder="50" min="0" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="metrics-inputs-grid">
+                                <div class="input-group">
+                                    <label for="revenue">Revenue (₹) *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-indian-rupee-sign"></i>
+                                        <input type="number" id="revenue" placeholder="5000.00" min="0" step="0.01"
+                                            required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="cost">Campaign Cost (₹) *</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-coins"></i>
+                                        <input type="number" id="cost" placeholder="1000.00" min="0" step="0.01"
+                                            required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" id="analyzeBtn" class="btn-primary">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Analyze & Transmit
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- CSV Upload Card -->
+                <section class="card upload-card" id="csvUploadCard">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-file-csv"></i> CSV Batch Analysis</h2>
+                        <p class="card-subtitle">Upload CSV for Automated Processing</p>
+                    </div>
+
+                    <div class="upload-area" id="dropZone">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <p>Drag & Drop CSV file here or click to browse</p>
+                        <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                        <button type="button" class="btn-secondary" id="browseBtn">Browse Files</button>
+                    </div>
+
+                    <div id="fileInfo" class="file-info" style="display: none;">
+                        <div class="file-details">
+                            <i class="fa-solid fa-file-csv"></i>
+                            <span id="fileName">filename.csv</span>
+                        </div>
+                        <button type="button" id="removeFileBtn" class="btn-icon"><i
+                                class="fa-solid fa-times"></i></button>
+                    </div>
+
+                    <div class="csv-requirements">
+                        <h4><i class="fa-solid fa-circle-info"></i> CSV Requirements</h4>
+                        <ul>
+                            <li>Columns: <code>campaign_name</code>, <code>channel</code>, <code>impressions</code>,
+                                <code>clicks</code>, <code>conversions</code>, <code>cost</code>, <code>revenue</code>
+                            </li>
+                            <li>Format: Standard UTF-8 CSV</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="uploadCsvBtn" class="btn-primary" disabled>
+                            <i class="fa-solid fa-upload"></i> Process Batch
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Individual Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content stark-ui">
+            <div class="modal-header">
+                <div class="header-info">
+                    <h2 id="reportCampaignName">Campaign Name</h2>
+                    <span id="reportCampaignId" class="campaign-id-badge">ID: CMP-12345</span>
+                </div>
+                <button class="btn-close-modal" id="closeReportModal"><i class="fa-solid fa-times"></i></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="report-stats-grid">
+                    <div class="report-card">
+                        <span class="report-label">ROI Performance</span>
+                        <span class="report-value" id="reportRoi">0.00x</span>
+                        <div class="report-progress">
+                            <div id="roiBar" class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="report-card">
+                        <span class="report-label">Conversion Rate</span>
+                        <span class="report-value" id="reportConvRate">0.00%</span>
+                        <div class="report-progress">
+                            <div id="convBar" class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="report-card">
+                        <span class="report-label">Cost Per Acquisition</span>
+                        <span class="report-value" id="reportCac">₹0.00</span>
+                    </div>
+                    <div class="report-card">
+                        <span class="report-label">Net Profit</span>
+                        <span class="report-value highlight-success" id="reportProfit">₹0.00</span>
+                    </div>
+                </div>
+
+                <div class="report-details-grid">
+                    <div class="card detail-card">
+                        <h3><i class="fa-solid fa-microchip"></i> Performance Breakdown</h3>
+                        <div class="detail-item">
+                            <span>Impressions:</span>
+                            <strong id="reportImpressions">0</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Clicks:</span>
+                            <strong id="reportClicks">0</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Conversions:</span>
+                            <strong id="reportConversions">0</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Total Cost:</span>
+                            <strong id="reportCost">₹0.00</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Total Revenue:</span>
+                            <strong id="reportRevenue">₹0.00</strong>
+                        </div>
+                    </div>
+                    <div class="card detail-card">
+                        <h3><i class="fa-solid fa-radar"></i> Channel Intelligence</h3>
+                        <p id="channelIntelligence">Loading intel...</p>
+                        <div class="channel-benchmark">
+                            <span>Performance vs Channel Avg:</span>
+                            <div id="benchmarkIndicator" class="benchmark-pill">Calculating...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-visuals-grid">
+                    <div class="card graph-card">
+                        <h3
+                            style="color: var(--primary); font-family: 'Orbitron', sans-serif; font-size: 0.9rem; margin-bottom: 15px;">
+                            <i class="fa-solid fa-chart-area"></i> PERFORMANCE VECTOR
+                        </h3>
+                        <div class="chart-container" style="height: 220px; position: relative;">
+                            <canvas id="campaignChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card analysis-card">
+                        <h3
+                            style="color: var(--accent); font-family: 'Orbitron', sans-serif; font-size: 0.9rem; margin-bottom: 15px;">
+                            <i class="fa-solid fa-brain"></i> STARK INTEL: DEEP ANALYSIS
+                        </h3>
+                        <div id="deepAnalysisContent" class="analysis-log"
+                            style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main);">
+                            <p class="text-muted">Analyzing vectors...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backend Visuals -->
+                <div class="report-matplotlib-section">
+                    <div class="card matplotlib-card">
+                        <h3
+                            style="color: var(--primary); font-family: 'Orbitron', sans-serif; font-size: 0.9rem; margin-bottom: 15px;">
+                            <i class="fa-solid fa-chart-line"></i> PERFORMANCE BENCHMARK (MATPLOTLIB)
+                        </h3>
+                        <div id="matplotlibChartLoading" class="text-muted" style="text-align: center; padding: 40px;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Processing Neural Data...
+                        </div>
+                        <img id="campaignMatplotlibChart" src="" alt="Campaign Comparison Chart"
+                            style="width: 100%; display: none; border-radius: 6px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <div class="stark-branding">INDRA SYSTEM v2.0 | TONY STARK PROTOCOL</div>
+        </div>
+    </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
